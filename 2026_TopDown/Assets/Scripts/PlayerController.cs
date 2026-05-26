@@ -77,6 +77,10 @@ public class PlayerController : MonoBehaviour
 
     public void OnMove(InputValue value)
     {
+        // 1. [새로 추가된 안전장치] 이미 파괴된 상태라면 여기서 실행을 멈춥니다.
+        if (sr == null || this == null) return;
+
+        // 2. [기존 코드 그대로 유지] 입력 값을 받아옵니다.
         input = value.Get<Vector2>();
         velocity = input.normalized * moveSpeed;
 
@@ -91,11 +95,23 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
-                if (input.x > 0)
+                // 3. [오타 수정] 기존의 input.x > 0 를 input.y > 0 로 수정했습니다!
+                if (input.y > 0)
                     ChangeSprites(spriteUp);
                 else
                     ChangeSprites(spriteDown);
             }
+        }
+    }
+
+    private void OnDisable()
+    {
+        // 게임이 꺼지거나 오브젝트가 사라질 때, 
+        // 입력 시스템이 플레이어를 더 이상 쳐다보지 못하도록 연결을 강제로 끊어버립니다.
+        var playerInput = GetComponent<PlayerInput>();
+        if (playerInput != null)
+        {
+            playerInput.enabled = false;
         }
     }
 }
