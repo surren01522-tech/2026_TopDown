@@ -1,117 +1,120 @@
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    public float moveSpeed = 5f;
+    public float moveSpeed = 5f; // 한 칸 이동할 때의 속도 (수치가 높을수록 휙 움직입니다)
+
+    // 스프라이트 애니메이션 배열들 (기존 설정 유지)
     public Sprite[] spriteUp;
     public Sprite[] spriteDown;
     public Sprite[] spriteLeft;
     public Sprite[] spriteRight;
     public float frameTime = 0.15f;
-    private Rigidbody2D rb;
+
     private SpriteRenderer sr;
-    private Vector2 input;
-    private Vector2 velocity;
     private Sprite[] currentSprites;
     private int frameIndex = 0;
     private float timer = 0f;
 
+    private Vector3 targetPosition; // 이동할 목표 격자 위치
+    private bool isMoving = false;  // 현재 한 칸 움직이는 중인가?
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
-
         currentSprites = spriteDown;
         sr.sprite = currentSprites[0];
+
+        // 시작할 때 현재 위치를 목표 위치로 잡아둡니다.
+        // 정수 단위(타일 칸)에 딱 맞추기 위해 Round(반올림)를 해줍니다.
+        targetPosition = new Vector3(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y), transform.position.z);
+        transform.position = targetPosition;
     }
 
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
     private void Update()
     {
-        if (input.sqrMagnitude <= 0.01f)
+        // 1. 캐릭터를 목표 타일 위치로 부드럽게 슬라이드 이동시킵니다. (눈의 즐거움을 위해)
+        if (isMoving)
         {
-            frameIndex = 0;
-            sr.sprite = currentSprites[frameIndex];
-            return;
-        }
+            transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
 
-        timer += Time.deltaTime;
+            // 애니메이션 재생
+            timer += Time.deltaTime;
+            if (timer >= frameTime)
+            {
+                timer = 0f;
+                frameIndex = (frameIndex + 1) % currentSprites.Length;
+                sr.sprite = currentSprites[frameIndex];
+            }
 
-        if (timer >= frameTime)
-        {
-            timer = 0f;
-            frameIndex++;
-
-            if (frameIndex >= currentSprites.Length)
+            // 목표 타일에 완전히 도착했다면?
+            if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
+            {
+                transform.position = targetPosition; // 위치 강제 고정
+                isMoving = false;
                 frameIndex = 0;
-            
-            sr.sprite = currentSprites[frameIndex];
+                sr.sprite = currentSprites[0]; // 정지 모션
+
+                // ★ 매우 중요: 내가 한 칸 이동을 마쳤으므로, GameManager에게 턴을 넘깁니다!
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.EndPlayerTurn();
+                }
+            }
         }
     }
 
-    private void FixedUpdate()
+    // New Input System에서 방향키를 누르면 '최초 1번' 실행되는 함수
+    public void OnMove(InputValue value)
     {
-        rb.MovePosition(rb.position + velocity * Time.fixedDeltaTime);
+        // 에디터 버그 방지 안전장치
+        if (sr == null || this == null) return;
+
+        // ★ 현재 플레이어의 턴이 아니거나, 이미 움직이는 중이라면 입력을 무시합니다.
+        if (GameManager.Instance != null && GameManager.Instance.currentState != GameState.PlayerTurn) return;
+        if (isMoving) return;
+
+        Vector2 input = value.Get<Vector2>();
+
+        // 대각선 이동을 막고 상하좌우 중 가장 강한 입력 하나만 선택합니다.
+        if (input.sqrMagnitude > 0f)
+        {
+            Vector3 direction = Vector3.zero;
+
+            if (Mathf.Abs(input.x) > Mathf.Abs(input.y))
+            {
+                direction = input.x > 0 ? Vector3.right : Vector3.left;
+                ChangeSprites(input.x > 0 ? spriteRight : spriteLeft);
+            }
+            else
+            {
+                direction = input.y > 0 ? Vector3.up : Vector3.down;
+                ChangeSprites(input.y > 0 ? spriteUp : spriteDown);
+            }
+
+            // [벽 충돌 검사 영역] 
+            // 나중에 여기에 "이동할 칸에 벽 타일이 있는지 확인하는 코드"를 넣을 예정입니다.
+            // 지금은 일단 무조건 이동하게 처리합니다.
+
+            // 현재 위치에서 정확히 딱 1칸(direction) 뒤의 위치를 목표로 설정합니다.
+            targetPosition = transform.position + direction;
+            isMoving = true;
+        }
     }
 
     private void ChangeSprites(Sprite[] newSprites)
     {
-        if (currentSprites == newSprites)
-            return;
-        
+        if (currentSprites == newSprites) return;
         currentSprites = newSprites;
         frameIndex = 0;
         timer = 0f;
         sr.sprite = currentSprites[frameIndex];
     }
 
-    public void OnMove(InputValue value)
-    {
-        // 1. [새로 추가된 안전장치] 이미 파괴된 상태라면 여기서 실행을 멈춥니다.
-        if (sr == null || this == null) return;
-
-        // 2. [기존 코드 그대로 유지] 입력 값을 받아옵니다.
-        input = value.Get<Vector2>();
-        velocity = input.normalized * moveSpeed;
-
-        if (input.sqrMagnitude > 0.0f)
-        {
-            if (Mathf.Abs(input.x) > Mathf.Abs(input.y))
-            {
-                if (input.x > 0)
-                    ChangeSprites(spriteRight);
-                else
-                    ChangeSprites(spriteLeft);
-            }
-            else
-            {
-                // 3. [오타 수정] 기존의 input.x > 0 를 input.y > 0 로 수정했습니다!
-                if (input.y > 0)
-                    ChangeSprites(spriteUp);
-                else
-                    ChangeSprites(spriteDown);
-            }
-        }
-    }
-
     private void OnDisable()
     {
-        // 게임이 꺼지거나 오브젝트가 사라질 때, 
-        // 입력 시스템이 플레이어를 더 이상 쳐다보지 못하도록 연결을 강제로 끊어버립니다.
         var playerInput = GetComponent<PlayerInput>();
-        if (playerInput != null)
-        {
-            playerInput.enabled = false;
-        }
+        if (playerInput != null) playerInput.enabled = false;
     }
 }

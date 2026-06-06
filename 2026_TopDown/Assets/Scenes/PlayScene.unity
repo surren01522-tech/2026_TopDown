@@ -653,8 +653,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1720425286}
   - component: {fileID: 1720425285}
-  - component: {fileID: 1720425284}
-  - component: {fileID: 1720425283}
+  - component: {fileID: 1720425288}
   - component: {fileID: 1720425287}
   m_Layer: 0
   m_Name: Player
@@ -663,55 +662,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!50 &1720425283
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1720425282}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 0
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 4
---- !u!114 &1720425284
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1720425282}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5ba18a65ea23bb2458c621ec7347a52c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  moveSpeed: 5
-  spriteUp:
-  - {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
-  spriteDown:
-  - {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
-  spriteLeft:
-  - {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
-  spriteRight:
-  - {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
-  frameTime: 0.15
 --- !u!212 &1720425285
 SpriteRenderer:
   serializedVersion: 2
@@ -759,7 +709,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Sprite: {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -816,6 +766,21 @@ MonoBehaviour:
   m_DefaultActionMap: 
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &1720425288
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1720425282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 962ff1147a93ce148880558dfa62a09d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerGridMovement
+  groundTilemap: {fileID: 1827377568}
+  obstacleTilemap: {fileID: 1314006455}
+  moveSpeed: 5
 --- !u!1 &1827377564
 GameObject:
   m_ObjectHideFlags: 0
