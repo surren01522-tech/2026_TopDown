@@ -3,9 +3,9 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    public float moveSpeed = 5f; // ÇÑ Ä­ ÀÌµ¿ÇÒ ¶§ÀÇ ¼Óµµ (¼öÄ¡°¡ ³ôÀ»¼ö·Ï È× ¿òÁ÷ÀÔ´Ï´Ù)
+    public float moveSpeed = 5f; // í•œ ì¹¸ ì´ë™í•  ë•Œì˜ ì†ë„ (ìˆ˜ì¹˜ê°€ ë†’ì„ìˆ˜ë¡ íœ™ ì›€ì§ì…ë‹ˆë‹¤)
 
-    // ½ºÇÁ¶óÀÌÆ® ¾Ö´Ï¸ŞÀÌ¼Ç ¹è¿­µé (±âÁ¸ ¼³Á¤ À¯Áö)
+    // ìŠ¤í”„ë¼ì´íŠ¸ ì• ë‹ˆë©”ì´ì…˜ ë°°ì—´ë“¤ (ê¸°ì¡´ ì„¤ì • ìœ ì§€)
     public Sprite[] spriteUp;
     public Sprite[] spriteDown;
     public Sprite[] spriteLeft;
@@ -13,12 +13,13 @@ public class PlayerController : MonoBehaviour
     public float frameTime = 0.15f;
 
     private SpriteRenderer sr;
+    private Rigidbody2D rb;
     private Sprite[] currentSprites;
     private int frameIndex = 0;
     private float timer = 0f;
 
-    private Vector3 targetPosition; // ÀÌµ¿ÇÒ ¸ñÇ¥ °İÀÚ À§Ä¡
-    private bool isMoving = false;  // ÇöÀç ÇÑ Ä­ ¿òÁ÷ÀÌ´Â ÁßÀÎ°¡?
+    private Vector3 targetPosition; // ì´ë™í•  ëª©í‘œ ê²©ì ìœ„ì¹˜
+    private bool isMoving = false;  // í˜„ì¬ í•œ ì¹¸ ì›€ì§ì´ëŠ” ì¤‘ì¸ê°€?
 
     private void Awake()
     {
@@ -26,20 +27,53 @@ public class PlayerController : MonoBehaviour
         currentSprites = spriteDown;
         sr.sprite = currentSprites[0];
 
-        // ½ÃÀÛÇÒ ¶§ ÇöÀç À§Ä¡¸¦ ¸ñÇ¥ À§Ä¡·Î Àâ¾ÆµÓ´Ï´Ù.
-        // Á¤¼ö ´ÜÀ§(Å¸ÀÏ Ä­)¿¡ µü ¸ÂÃß±â À§ÇØ Round(¹İ¿Ã¸²)¸¦ ÇØÁİ´Ï´Ù.
+        // ì‹œì‘í•  ë•Œ í˜„ì¬ ìœ„ì¹˜ë¥¼ ëª©í‘œ ìœ„ì¹˜ë¡œ ì¡ì•„ë‘¡ë‹ˆë‹¤.
+        // ì •ìˆ˜ ë‹¨ìœ„(íƒ€ì¼ ì¹¸)ì— ë”± ë§ì¶”ê¸° ìœ„í•´ Round(ë°˜ì˜¬ë¦¼)ë¥¼ í•´ì¤ë‹ˆë‹¤.
         targetPosition = new Vector3(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y), transform.position.z);
         transform.position = targetPosition;
+
+
+        rb = GetComponent<Rigidbody2D>();   
+        sr = GetComponent<SpriteRenderer>();
+
+        currentSprites = spriteDown;
+        sr.sprite = currentSprites[0];
+
+        moveSpeed = GameDataManager.Instance.GetPlayerMoveSpeed();
+        playerHP = GameDataManager.Instance.GetPlayerHP();
+        playerAttack = GameDataManager.Instance.GetPlayerAttack();
+    }
+
+    void Start()
+    {
+        if(GameDataManager.Instance.isTutorialFinished == 0)
+        {
+            // íŠœí† ë¦¬ì–¼ ì•ˆ í–ˆì„ ê²½ìš° íŠœí† ë¦¬ì–¼ ì˜¤í”ˆ
+            Debug.Log("íŠœí† ë¦¬ì–¼ ì˜¤í”ˆ!");
+            GameDataManager.Instance.isTutorialFinished = 1;
+        }
+        else
+        {
+            //íŠœí† ë¦¬ì–¼ í–ˆì„ ê²½ìš° ì•„ë¬´ê²ƒë„ ì•ˆ í•¨
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Enemy"))
+        {
+            GameManager.Instance.GameOver();
+        }
     }
 
     private void Update()
     {
-        // 1. Ä³¸¯ÅÍ¸¦ ¸ñÇ¥ Å¸ÀÏ À§Ä¡·Î ºÎµå·´°Ô ½½¶óÀÌµå ÀÌµ¿½ÃÅµ´Ï´Ù. (´«ÀÇ Áñ°Å¿òÀ» À§ÇØ)
+        // 1. ìºë¦­í„°ë¥¼ ëª©í‘œ íƒ€ì¼ ìœ„ì¹˜ë¡œ ë¶€ë“œëŸ½ê²Œ ìŠ¬ë¼ì´ë“œ ì´ë™ì‹œí‚µë‹ˆë‹¤. (ëˆˆì˜ ì¦ê±°ì›€ì„ ìœ„í•´)
         if (isMoving)
         {
             transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
 
-            // ¾Ö´Ï¸ŞÀÌ¼Ç Àç»ı
+            // ì• ë‹ˆë©”ì´ì…˜ ì¬ìƒ
             timer += Time.deltaTime;
             if (timer >= frameTime)
             {
@@ -48,36 +82,36 @@ public class PlayerController : MonoBehaviour
                 sr.sprite = currentSprites[frameIndex];
             }
 
-            // ¸ñÇ¥ Å¸ÀÏ¿¡ ¿ÏÀüÈ÷ µµÂøÇß´Ù¸é?
+            // ëª©í‘œ íƒ€ì¼ì— ì™„ì „íˆ ë„ì°©í–ˆë‹¤ë©´?
             if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
             {
-                transform.position = targetPosition; // À§Ä¡ °­Á¦ °íÁ¤
+                transform.position = targetPosition; // ìœ„ì¹˜ ê°•ì œ ê³ ì •
                 isMoving = false;
                 frameIndex = 0;
-                sr.sprite = currentSprites[0]; // Á¤Áö ¸ğ¼Ç
+                sr.sprite = currentSprites[0]; // ì •ì§€ ëª¨ì…˜
 
-                // ¡Ú ¸Å¿ì Áß¿ä: ³»°¡ ÇÑ Ä­ ÀÌµ¿À» ¸¶ÃÆÀ¸¹Ç·Î, GameManager¿¡°Ô ÅÏÀ» ³Ñ±é´Ï´Ù!
+                // â˜… ë§¤ìš° ì¤‘ìš”: ë‚´ê°€ í•œ ì¹¸ ì´ë™ì„ ë§ˆì³¤ìœ¼ë¯€ë¡œ, GameManagerì—ê²Œ í„´ì„ ë„˜ê¹ë‹ˆë‹¤!
                 if (GameManager.Instance != null)
                 {
-                    GameManager.Instance.EndPlayerTurn();
+                    //GameManager.Instance.EndPlayerTurn();
                 }
             }
         }
     }
 
-    // New Input System¿¡¼­ ¹æÇâÅ°¸¦ ´©¸£¸é 'ÃÖÃÊ 1¹ø' ½ÇÇàµÇ´Â ÇÔ¼ö
+    // New Input Systemì—ì„œ ë°©í–¥í‚¤ë¥¼ ëˆ„ë¥´ë©´ 'ìµœì´ˆ 1ë²ˆ' ì‹¤í–‰ë˜ëŠ” í•¨ìˆ˜
     public void OnMove(InputValue value)
     {
-        // ¿¡µğÅÍ ¹ö±× ¹æÁö ¾ÈÀüÀåÄ¡
+        // ì—ë””í„° ë²„ê·¸ ë°©ì§€ ì•ˆì „ì¥ì¹˜
         if (sr == null || this == null) return;
 
-        // ¡Ú ÇöÀç ÇÃ·¹ÀÌ¾îÀÇ ÅÏÀÌ ¾Æ´Ï°Å³ª, ÀÌ¹Ì ¿òÁ÷ÀÌ´Â ÁßÀÌ¶ó¸é ÀÔ·ÂÀ» ¹«½ÃÇÕ´Ï´Ù.
-        if (GameManager.Instance != null && GameManager.Instance.currentState != GameState.PlayerTurn) return;
+        // â˜… í˜„ì¬ í”Œë ˆì´ì–´ì˜ í„´ì´ ì•„ë‹ˆê±°ë‚˜, ì´ë¯¸ ì›€ì§ì´ëŠ” ì¤‘ì´ë¼ë©´ ì…ë ¥ì„ ë¬´ì‹œí•©ë‹ˆë‹¤.
+        //if (GameManager.Instance != null && GameManager.Instance.currentState != GameState.PlayerTurn) return;
         if (isMoving) return;
 
         Vector2 input = value.Get<Vector2>();
 
-        // ´ë°¢¼± ÀÌµ¿À» ¸·°í »óÇÏÁÂ¿ì Áß °¡Àå °­ÇÑ ÀÔ·Â ÇÏ³ª¸¸ ¼±ÅÃÇÕ´Ï´Ù.
+        // ëŒ€ê°ì„  ì´ë™ì„ ë§‰ê³  ìƒí•˜ì¢Œìš° ì¤‘ ê°€ì¥ ê°•í•œ ì…ë ¥ í•˜ë‚˜ë§Œ ì„ íƒí•©ë‹ˆë‹¤.
         if (input.sqrMagnitude > 0f)
         {
             Vector3 direction = Vector3.zero;
@@ -93,11 +127,11 @@ public class PlayerController : MonoBehaviour
                 ChangeSprites(input.y > 0 ? spriteUp : spriteDown);
             }
 
-            // [º® Ãæµ¹ °Ë»ç ¿µ¿ª] 
-            // ³ªÁß¿¡ ¿©±â¿¡ "ÀÌµ¿ÇÒ Ä­¿¡ º® Å¸ÀÏÀÌ ÀÖ´ÂÁö È®ÀÎÇÏ´Â ÄÚµå"¸¦ ³ÖÀ» ¿¹Á¤ÀÔ´Ï´Ù.
-            // Áö±İÀº ÀÏ´Ü ¹«Á¶°Ç ÀÌµ¿ÇÏ°Ô Ã³¸®ÇÕ´Ï´Ù.
+            // [ë²½ ì¶©ëŒ ê²€ì‚¬ ì˜ì—­] 
+            // ë‚˜ì¤‘ì— ì—¬ê¸°ì— "ì´ë™í•  ì¹¸ì— ë²½ íƒ€ì¼ì´ ìˆëŠ”ì§€ í™•ì¸í•˜ëŠ” ì½”ë“œ"ë¥¼ ë„£ì„ ì˜ˆì •ì…ë‹ˆë‹¤.
+            // ì§€ê¸ˆì€ ì¼ë‹¨ ë¬´ì¡°ê±´ ì´ë™í•˜ê²Œ ì²˜ë¦¬í•©ë‹ˆë‹¤.
 
-            // ÇöÀç À§Ä¡¿¡¼­ Á¤È®È÷ µü 1Ä­(direction) µÚÀÇ À§Ä¡¸¦ ¸ñÇ¥·Î ¼³Á¤ÇÕ´Ï´Ù.
+            // í˜„ì¬ ìœ„ì¹˜ì—ì„œ ì •í™•íˆ ë”± 1ì¹¸(direction) ë’¤ì˜ ìœ„ì¹˜ë¥¼ ëª©í‘œë¡œ ì„¤ì •í•©ë‹ˆë‹¤.
             targetPosition = transform.position + direction;
             isMoving = true;
         }
@@ -117,4 +151,9 @@ public class PlayerController : MonoBehaviour
         var playerInput = GetComponent<PlayerInput>();
         if (playerInput != null) playerInput.enabled = false;
     }
+
+    public int playerHP = 0;
+    public int playerAttack = 0;
+
+
 }

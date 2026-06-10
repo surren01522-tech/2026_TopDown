@@ -1,59 +1,112 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-[Serializable]
-public class PlayerData
-{
-    public List<string> collectedItems = new List<string>();
-    public int Stage = 1;
-}
 
 public class GameDataManager : MonoBehaviour
 {
-    public static GameDataManager Instance;
-    public PlayerData playerData;
+   public static GameDataManager Instance;
+   public GameSettingData gameSettingData;
+   public SaveData saveData;
+   public int isTutorialFinished;
 
-    private void Awake()
+   private string savePath;
+
+   private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            savePath = Application.persistentDataPath + "/saveData.json";
+
+            LoadJsonData();
+            LoadPlayerPrefs();
         }
         else
         {
-            DontDestroyOnLoad(gameObject);
+            Destroy(gameObject);
         }
+    } 
+
+    
+    //ScriptableObject part
+    public int GetPlayerHP()
+    {
+        int baseHP = gameSettingData.startHP;
+        int bonusHP = gameSettingData.hpBounsPerDeath;
+
+        return baseHP + bonusHP * saveData.deathCount;
     }
 
-    public void SaveData(PlayerData playerData)
+    public int GetPlayerAttack()
     {
-        string filePath = Application.persistentDataPath + "/player_data.json";
-        string json = JsonUtility.ToJson(playerData, true);
-        System.IO.File.WriteAllText(filePath, json);
-        Debug.Log("게임 데이터 저장됨: " + json);
+        int baseAttack = gameSettingData.startAttack;
+        int bonusAttack = gameSettingData.atkBonusPerDeath;
+        return baseAttack + bonusAttack * saveData.deathCount;
     }
 
-    public PlayerData LoadData()
+    public float GetPlayerMoveSpeed()
     {
-        string filePath = Application.persistentDataPath + "/player_data.json";
-        if (System.IO.File.Exists(filePath))
+        return gameSettingData.playerMoveSpeed;
+    }
+
+    
+    //Json part
+    public void SaveGameResult()
+    {
+        saveData.deathCount++;
+
+        SaveJsonData();
+    }
+
+    public void SaveJsonData()
+    {
+        string json = JsonUtility.ToJson(saveData, true);
+        File.WriteAllText(savePath, json);
+
+        Debug.Log("Json 저장 완료: " + savePath);
+    }
+
+    public void LoadJsonData()
+    {
+        if (File.Exists(savePath))
         {
-            string json = System.IO.File.ReadAllText(filePath);
-            PlayerData playerData = JsonUtility.FromJson<PlayerData>(json);
-            Debug.Log("게임 데이터 로드됨: " + json);
-            return playerData;
+            string json = File.ReadAllText(savePath);
+            saveData = JsonUtility.FromJson<SaveData>(json);
         }
         else
         {
-            Debug.LogWarning("저장된 게임 데이터가 없습니다.");
-            return new PlayerData();
+            saveData = new SaveData();
+            SaveJsonData();
         }
     }
 
+    public void DeleteJsonData()
+    {
+        if (File.Exists(savePath))
+        {
+            File.Delete(savePath);
+        }
 
+        saveData = new SaveData();
+        SaveJsonData();
+
+        Debug.Log("JSON 저장 데이터 삭제");
+    }
+
+    //PlayerPrefs
+    public void LoadPlayerPrefs()
+    {
+        isTutorialFinished = PlayerPrefs.GetInt("TUTORIAL", 0);
+    }
+
+    public void SavePlayerPrefs()
+    {
+        PlayerPrefs.SetInt("TUTORAL", isTutorialFinished);
+        LoadPlayerPrefs();
+
+        Debug.Log("PlayerPrefs 삭제 완료");
+    }
 }
