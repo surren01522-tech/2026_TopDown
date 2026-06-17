@@ -32,6 +32,11 @@ public class GameManager : MonoBehaviour
         GoTitle();
     }
 
+    public void GameStartButton()
+    {
+        GameManager.Instance.StartGame();
+    }
+
     public void GoTitle()
     {
         SceneManager.LoadScene(titleSceneName);

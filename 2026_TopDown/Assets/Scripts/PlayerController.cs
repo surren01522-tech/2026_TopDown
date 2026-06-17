@@ -3,6 +3,9 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    [Header("Spawn Settings")]
+    public Vector3 spawnPosition = Vector3.zero; // 인스펙터에서 입력할 시작 좌표 (Z축은 보통 0)
+
     public float moveSpeed = 5f; // 한 칸 이동할 때의 속도 (수치가 높을수록 휙 움직입니다)
 
     // 스프라이트 애니메이션 배열들 (기존 설정 유지)
@@ -27,34 +30,31 @@ public class PlayerController : MonoBehaviour
         currentSprites = spriteDown;
         sr.sprite = currentSprites[0];
 
-        // 시작할 때 현재 위치를 목표 위치로 잡아둡니다.
-        // 정수 단위(타일 칸)에 딱 맞추기 위해 Round(반올림)를 해줍니다.
-        targetPosition = new Vector3(Mathf.Round(transform.position.x), Mathf.Round(transform.position.y), transform.position.z);
+        // [수정] Mathf.Round를 제거하여 인스펙터에 입력한 소수점 좌표(9.5, -16.5)가 그대로 유지되도록 합니다.
+        targetPosition = new Vector3(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         transform.position = targetPosition;
 
-
-        rb = GetComponent<Rigidbody2D>();   
-        sr = GetComponent<SpriteRenderer>();
-
-        currentSprites = spriteDown;
-        sr.sprite = currentSprites[0];
-
-        moveSpeed = GameDataManager.Instance.GetPlayerMoveSpeed();
-        playerHP = GameDataManager.Instance.GetPlayerHP();
-        playerAttack = GameDataManager.Instance.GetPlayerAttack();
+        rb = GetComponent<Rigidbody2D>();
     }
 
     void Start()
     {
-        if(GameDataManager.Instance.isTutorialFinished == 0)
+        // [수정] 데이터 매니저 조회를 Awake에서 Start로 옮겼습니다.
+        if (GameDataManager.Instance != null)
         {
-            // 튜토리얼 안 했을 경우 튜토리얼 오픈
-            Debug.Log("튜토리얼 오픈!");
-            GameDataManager.Instance.isTutorialFinished = 1;
+            moveSpeed = GameDataManager.Instance.GetPlayerMoveSpeed();
+            playerHP = GameDataManager.Instance.GetPlayerHP();
+            playerAttack = GameDataManager.Instance.GetPlayerAttack();
         }
         else
         {
-            //튜토리얼 했을 경우 아무것도 안 함
+            Debug.LogError("하이어라키 창에 GameDataManager 오브젝트가 있는지 확인해주세요!");
+        }
+
+        // 기존 튜토리얼 코드
+        if (GameDataManager.Instance != null && GameDataManager.Instance.isTutorialFinished == 0)
+        {
+            // 튜토리얼 관련 처리...
         }
     }
 
@@ -68,12 +68,9 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // 1. 캐릭터를 목표 타일 위치로 부드럽게 슬라이드 이동시킵니다. (눈의 즐거움을 위해)
         if (isMoving)
         {
-            transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
-
-            // 애니메이션 재생
+            // 움직이는 순간의 애니메이션 처리만 남겨둡니다.
             timer += Time.deltaTime;
             if (timer >= frameTime)
             {
@@ -82,19 +79,15 @@ public class PlayerController : MonoBehaviour
                 sr.sprite = currentSprites[frameIndex];
             }
 
-            // 목표 타일에 완전히 도착했다면?
-            if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
-            {
-                transform.position = targetPosition; // 위치 강제 고정
-                isMoving = false;
-                frameIndex = 0;
-                sr.sprite = currentSprites[0]; // 정지 모션
+            // 끊기는 이동 특성상 1프레임만에 목표에 도달하므로 바로 정지 모션으로 바꿉니다.
+            isMoving = false;
+            frameIndex = 0;
+            sr.sprite = currentSprites[0];
 
-                // ★ 매우 중요: 내가 한 칸 이동을 마쳤으므로, GameManager에게 턴을 넘깁니다!
-                if (GameManager.Instance != null)
-                {
-                    //GameManager.Instance.EndPlayerTurn();
-                }
+            // GameManager에게 턴을 넘깁니다. (턴제 게임일 경우 주석 해제)
+            if (GameManager.Instance != null)
+            {
+                // GameManager.Instance.EndPlayerTurn();
             }
         }
     }
@@ -102,16 +95,11 @@ public class PlayerController : MonoBehaviour
     // New Input System에서 방향키를 누르면 '최초 1번' 실행되는 함수
     public void OnMove(InputValue value)
     {
-        // 에디터 버그 방지 안전장치
         if (sr == null || this == null) return;
-
-        // ★ 현재 플레이어의 턴이 아니거나, 이미 움직이는 중이라면 입력을 무시합니다.
-        //if (GameManager.Instance != null && GameManager.Instance.currentState != GameState.PlayerTurn) return;
         if (isMoving) return;
 
         Vector2 input = value.Get<Vector2>();
 
-        // 대각선 이동을 막고 상하좌우 중 가장 강한 입력 하나만 선택합니다.
         if (input.sqrMagnitude > 0f)
         {
             Vector3 direction = Vector3.zero;
@@ -127,12 +115,11 @@ public class PlayerController : MonoBehaviour
                 ChangeSprites(input.y > 0 ? spriteUp : spriteDown);
             }
 
-            // [벽 충돌 검사 영역] 
-            // 나중에 여기에 "이동할 칸에 벽 타일이 있는지 확인하는 코드"를 넣을 예정입니다.
-            // 지금은 일단 무조건 이동하게 처리합니다.
-
-            // 현재 위치에서 정확히 딱 1칸(direction) 뒤의 위치를 목표로 설정합니다.
+            // [핵심 변경 사항] 부드럽게 이동하지 않고, 목표 위치로 즉시 좌표를 꽂아버립니다.
             targetPosition = transform.position + direction;
+            transform.position = targetPosition;
+
+            // 이동 상태를 켜서 Update에서 애니메이션 및 턴 처리가 1번 실행되도록 합니다.
             isMoving = true;
         }
     }
