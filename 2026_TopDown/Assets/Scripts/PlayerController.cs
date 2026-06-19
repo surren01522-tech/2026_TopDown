@@ -5,10 +5,16 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Spawn Settings")]
     public Vector3 spawnPosition = Vector3.zero; // 인스펙터에서 입력할 시작 좌표 (Z축은 보통 0)
+    public float moveSpeed = 5f; // 한 칸 이동할 때의 속도
 
-    public float moveSpeed = 5f; // 한 칸 이동할 때의 속도 (수치가 높을수록 휙 움직입니다)
+    [Header("Player Stats")]
+    public int playerHP = 100;
+    public int playerAttack = 10;
 
-    // 스프라이트 애니메이션 배열들 (기존 설정 유지)
+    [Header("Tilemap Reference")]
+    public UnityEngine.Tilemaps.Tilemap wallTilemap; // 인스펙터에서 벽 타일맵을 지정하세요 (없으면 자동 수색)
+
+    [Header("Animations")]
     public Sprite[] spriteUp;
     public Sprite[] spriteDown;
     public Sprite[] spriteLeft;
@@ -30,7 +36,7 @@ public class PlayerController : MonoBehaviour
         currentSprites = spriteDown;
         sr.sprite = currentSprites[0];
 
-        // [수정] Mathf.Round를 제거하여 인스펙터에 입력한 소수점 좌표(9.5, -16.5)가 그대로 유지되도록 합니다.
+        // 소수점 좌표(9.5, -16.5)가 그대로 유지되도록 합니다.
         targetPosition = new Vector3(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         transform.position = targetPosition;
 
@@ -39,7 +45,7 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
-        // [수정] 데이터 매니저 조회를 Awake에서 Start로 옮겼습니다.
+        // 1. [안전 장치] 데이터 매니저 조회 및 예외 처리 (에러 원천 차단)
         if (GameDataManager.Instance != null)
         {
             moveSpeed = GameDataManager.Instance.GetPlayerMoveSpeed();
@@ -48,13 +54,40 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("하이어라키 창에 GameDataManager 오브젝트가 있는지 확인해주세요!");
+            Debug.LogWarning("GameDataManager.Instance를 찾을 수 없습니다. 기본값으로 진행합니다.");
         }
 
-        // 기존 튜토리얼 코드
+        // 2. [자동 연동] 인스펙터에 벽 타일맵이 비어있다면 씬에서 자동으로 찾아 매핑합니다.
+        if (wallTilemap == null)
+        {
+            // 하이어라키 창에 있는 'WallTilemap' 이름을 가진 오브젝트를 찾습니다.
+            GameObject wallObj = GameObject.Find("WallTilemap");
+            if (wallObj != null)
+            {
+                wallTilemap = wallObj.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+            }
+        }
+
+        // 튜토리얼 코드 예외 처리
         if (GameDataManager.Instance != null && GameDataManager.Instance.isTutorialFinished == 0)
         {
             // 튜토리얼 관련 처리...
+        }
+
+        // 0.05초 뒤에 현재 위치를 기준으로 맵을 강제 리프레시
+        Invoke(nameof(InitialReveal), 0.05f);
+    }
+
+    private void InitialReveal()
+    {
+        FieldOfView fov = FindFirstObjectByType<FieldOfView>();
+        if (fov != null)
+        {
+            fov.RevealMap(transform.position);
+        }
+        else
+        {
+            Debug.LogWarning("씬 안에서 FieldOfView 오브젝트를 찾을 수 없습니다.");
         }
     }
 
@@ -62,7 +95,7 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.CompareTag("Enemy"))
         {
-            GameManager.Instance.GameOver();
+            if (GameManager.Instance != null) GameManager.Instance.GameOver();
         }
     }
 
@@ -70,7 +103,6 @@ public class PlayerController : MonoBehaviour
     {
         if (isMoving)
         {
-            // 움직이는 순간의 애니메이션 처리만 남겨둡니다.
             timer += Time.deltaTime;
             if (timer >= frameTime)
             {
@@ -79,24 +111,23 @@ public class PlayerController : MonoBehaviour
                 sr.sprite = currentSprites[frameIndex];
             }
 
-            // 끊기는 이동 특성상 1프레임만에 목표에 도달하므로 바로 정지 모션으로 바꿉니다.
             isMoving = false;
             frameIndex = 0;
             sr.sprite = currentSprites[0];
-
-            // GameManager에게 턴을 넘깁니다. (턴제 게임일 경우 주석 해제)
-            if (GameManager.Instance != null)
-            {
-                // GameManager.Instance.EndPlayerTurn();
-            }
         }
     }
 
-    // New Input System에서 방향키를 누르면 '최초 1번' 실행되는 함수
     public void OnMove(InputValue value)
     {
         if (sr == null || this == null) return;
         if (isMoving) return;
+
+        // [중요] 벽 타일맵이 없으면 충돌 연산 자체를 건너뛰어 터지는 것을 방지합니다.
+        if (wallTilemap == null)
+        {
+            Debug.LogError("WallTilemap이 할당되지 않아 충돌 검사를 할 수 없습니다!");
+            return;
+        }
 
         Vector2 input = value.Get<Vector2>();
 
@@ -115,12 +146,29 @@ public class PlayerController : MonoBehaviour
                 ChangeSprites(input.y > 0 ? spriteUp : spriteDown);
             }
 
-            // [핵심 변경 사항] 부드럽게 이동하지 않고, 목표 위치로 즉시 좌표를 꽂아버립니다.
-            targetPosition = transform.position + direction;
+            Vector3 prospectiveTarget = transform.position + direction;
+
+            // 벽 충돌 검사
+            Vector3Int cellPos = wallTilemap.layoutGrid.WorldToCell(prospectiveTarget);
+
+            if (wallTilemap.HasTile(cellPos))
+            {
+                isMoving = false;
+                return;
+            }
+
+            // 이동 처리
+            targetPosition = prospectiveTarget;
             transform.position = targetPosition;
 
-            // 이동 상태를 켜서 Update에서 애니메이션 및 턴 처리가 1번 실행되도록 합니다.
             isMoving = true;
+
+            // 이동 후 FOV 실시간 연동
+            FieldOfView fov = FindFirstObjectByType<FieldOfView>();
+            if (fov != null)
+            {
+                fov.RevealMap(transform.position);
+            }
         }
     }
 
@@ -138,9 +186,4 @@ public class PlayerController : MonoBehaviour
         var playerInput = GetComponent<PlayerInput>();
         if (playerInput != null) playerInput.enabled = false;
     }
-
-    public int playerHP = 0;
-    public int playerAttack = 0;
-
-
 }

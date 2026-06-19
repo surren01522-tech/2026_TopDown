@@ -1,18 +1,25 @@
 using System.IO;
-using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
-
 
 public class GameDataManager : MonoBehaviour
 {
-   public static GameDataManager Instance;
-   public GameSettingData gameSettingData;
-   public SaveData saveData;
-   public int isTutorialFinished;
+    public static GameDataManager Instance;
 
-   private string savePath;
+    [Header("Data References")]
+    public GameSettingData gameSettingData;
+    public SaveData saveData;
 
-   private void Awake()
+    [Header("Game Flags")]
+    public int isTutorialFinished;
+
+    // 👍 타이틀 UI 버튼 연동을 위해 추가된 세팅 변수들
+    [Header("Settings")]
+    public bool isColorMode = true;
+    public bool isSoundOn = true;
+
+    private string savePath;
+
+    private void Awake()
     {
         if (Instance == null)
         {
@@ -28,12 +35,13 @@ public class GameDataManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-    } 
+    }
 
-    
-    //ScriptableObject part
+    // --- ScriptableObject & SaveData 연동 파트 ---
     public int GetPlayerHP()
     {
+        if (gameSettingData == null || saveData == null) return 100; // 방어 코드
+
         int baseHP = gameSettingData.startHP;
         int bonusHP = gameSettingData.hpBounsPerDeath;
 
@@ -42,6 +50,8 @@ public class GameDataManager : MonoBehaviour
 
     public int GetPlayerAttack()
     {
+        if (gameSettingData == null || saveData == null) return 10; // 방어 코드
+
         int baseAttack = gameSettingData.startAttack;
         int bonusAttack = gameSettingData.atkBonusPerDeath;
         return baseAttack + bonusAttack * saveData.deathCount;
@@ -49,15 +59,18 @@ public class GameDataManager : MonoBehaviour
 
     public float GetPlayerMoveSpeed()
     {
+        if (gameSettingData == null) return 5f; // 방어 코드
+
         return gameSettingData.playerMoveSpeed;
     }
 
-    
-    //Json part
+    // --- Json 저장 파트 ---
     public void SaveGameResult()
     {
-        saveData.deathCount++;
-
+        if (saveData != null)
+        {
+            saveData.deathCount++;
+        }
         SaveJsonData();
     }
 
@@ -96,7 +109,7 @@ public class GameDataManager : MonoBehaviour
         Debug.Log("JSON 저장 데이터 삭제");
     }
 
-    //PlayerPrefs
+    // --- PlayerPrefs 파트 ---
     public void LoadPlayerPrefs()
     {
         isTutorialFinished = PlayerPrefs.GetInt("TUTORIAL", 0);
@@ -104,9 +117,10 @@ public class GameDataManager : MonoBehaviour
 
     public void SavePlayerPrefs()
     {
-        PlayerPrefs.SetInt("TUTORAL", isTutorialFinished);
-        LoadPlayerPrefs();
+        // 💡 기존 코드의 오타("TUTORAL")를 "TUTORIAL"로 통일하여 수정했습니다.
+        PlayerPrefs.SetInt("TUTORIAL", isTutorialFinished);
+        PlayerPrefs.Save(); // 명시적 저장 추가
 
-        Debug.Log("PlayerPrefs 삭제 완료");
+        Debug.Log("PlayerPrefs 저장 완료");
     }
 }
