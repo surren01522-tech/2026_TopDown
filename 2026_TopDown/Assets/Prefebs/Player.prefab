@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 7955574204122840948}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -109,6 +109,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerGridMovement
   spawnPosition: {x: -30.5, y: -15.5, z: -2}
   moveSpeed: 5
+  playerHP: 0
+  playerAttack: 0
   wallTilemap: {fileID: 0}
   spriteUp:
   - {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
@@ -119,8 +121,6 @@ MonoBehaviour:
   spriteRight:
   - {fileID: -2808540702583665609, guid: 625b3c90c7be79a42819923b234ecdd0, type: 3}
   frameTime: 0.15
-  playerHP: 0
-  playerAttack: 0
 --- !u!114 &6339120630711701216
 MonoBehaviour:
   m_ObjectHideFlags: 0
