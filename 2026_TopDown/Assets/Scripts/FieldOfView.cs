@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Tilemaps;
 
 public class FieldOfView : MonoBehaviour
@@ -6,65 +6,81 @@ public class FieldOfView : MonoBehaviour
     public static FieldOfView Instance;
 
     [Header("Tilemap References")]
-    public Tilemap fogTilemap; // ¾îµÒÀ» ´ã´çÇÏ´Â Å¸ÀÏ¸Ê
+    public Tilemap fogTilemap; // ì–´ë‘ ì„ ë‹´ë‹¹í•˜ëŠ” íƒ€ì¼ë§µ
 
     [Header("FOV Settings")]
     [Range(1, 10)]
-    public int viewRadius = 2; // ÇÃ·¹ÀÌ¾î ÁÖº¯ ¸î Ä­±îÁö ¹àÈúÁö °áÁ¤ (¹İÁö¸§)
+    public int viewRadius = 2; // í”Œë ˆì´ì–´ ì£¼ë³€ ëª‡ ì¹¸ê¹Œì§€ ë°íì§€ ê²°ì • (ë°˜ì§€ë¦„)
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
-
-        // ±âÁ¸ ÄÚµå°¡ ½Ì±ÛÅæÀ» µ¤¾î¾²Áö ¾Êµµ·Ï È®½ÇÇÏ°Ô ÇöÀç ¿ÀºêÁ§Æ®·Î °íÁ¤ÇÕ´Ï´Ù.
-        Instance = this;
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     /// <summary>
-    /// ÇÃ·¹ÀÌ¾îÀÇ ÇöÀç ¿ùµå À§Ä¡¸¦ ±âÁØÀ¸·Î ÁÖº¯ÀÇ ¾È°³¸¦ Áö¿ó´Ï´Ù.
+    /// í”Œë ˆì´ì–´ì˜ í˜„ì¬ ì›”ë“œ ìœ„ì¹˜ë¥¼ ê¸°ì¤€ìœ¼ë¡œ ì£¼ë³€ì˜ ì•ˆê°œë¥¼ ì§€ì›ë‹ˆë‹¤.
     /// </summary>
+    // ğŸšª ì”¬ ì „í™˜ ì‹œ ìë™ìœ¼ë¡œ íƒ€ì¼ë§µì„ ìƒˆë¡œ ì°¾ì•„ ë§¤í•‘í•˜ëŠ” ë¡œì§ì´ ì¶”ê°€ëœ ì™„ì„±í˜• í•¨ìˆ˜
     public void RevealMap(Vector3 playerWorldPos)
     {
-        if (fogTilemap == null) return;
+        // íƒ€ì¼ë§µ ì²´í¬ ë° ìë™ íƒìƒ‰ (ì—†ìœ¼ë©´ ì‹¤í–‰ ì°¨ë‹¨ìœ¼ë¡œ ì—ëŸ¬ ë°©ì§€)
+        if (!CheckAndFindFogTilemap()) return;
 
-        // ÇÃ·¹ÀÌ¾îÀÇ ¿ùµå ÁÂÇ¥¸¦ Å¸ÀÏ¸Ê °İÀÚ ÁÂÇ¥(Vector3Int)·Î º¯È¯
         Vector3Int playerCell = fogTilemap.layoutGrid.WorldToCell(playerWorldPos);
 
-        // ÁöÁ¤ÇÑ ¹İÁö¸§(viewRadius)¸¸Å­ ·çÇÁ¸¦ µ¹¸ç ÁÖº¯ Å¸ÀÏÀ» Áö¿ó´Ï´Ù.
         for (int x = -viewRadius; x <= viewRadius; x++)
         {
             for (int y = -viewRadius; y <= viewRadius; y++)
             {
-                // ¿øÇüÅÂ·Î ¹àÈ÷°í ½Í´Ù¸é ¸ÇÇØÆ° °Å¸®³ª À¯Å¬¸®µå °Å¸® Ã¼Å©¸¦ Ãß°¡ÇÒ ¼ö ÀÖ½À´Ï´Ù.
-                // ¿©±â¼­´Â Á÷°üÀûÀÎ »ç°¢Çü ¹üÀ§(·Î±×¶óÀÌÅ© ½ºÅ¸ÀÏ)·Î Áö¿ó´Ï´Ù.
                 Vector3Int targetCell = new Vector3Int(playerCell.x + x, playerCell.y + y, playerCell.z);
-
-                // ÇØ´ç Ä­ÀÇ °ËÀº»ö Å¸ÀÏÀ» Áö¿ö¹ö¸² (¾Æ·¡ ¹è°æ Å¸ÀÏÀÌ º¸ÀÌ°Ô µÊ)
-                fogTilemap.SetTile(targetCell, null);
+                fogTilemap.SetTile(targetCell, null); // â—€ 46ë²ˆ ì¤„ ì—ëŸ¬ ì›ì²œ ì°¨ë‹¨!
             }
         }
     }
 
     /// <summary>
-    /// ÁöÁ¤µÈ »ç°¢Çü ¿µ¿ª(¹æ) ÀüÃ¼ÀÇ ¾È°³¸¦ ÇÑ ¹ø¿¡ Áö¿ó´Ï´Ù.
+    /// ğŸšª [ìˆ˜ì • ì™„ë£Œ] ì§€ì •ëœ ì‚¬ê°í˜• ì˜ì—­(ë°©) ì „ì²´ì˜ ì•ˆê°œë¥¼ í•œ ë²ˆì— ì§€ì›ë‹ˆë‹¤.
     /// </summary>
     public void RevealRoom(Vector2 minWorldPos, Vector2 maxWorldPos)
     {
-        if (fogTilemap == null) return;
+        // íƒ€ì¼ë§µ ì²´í¬ ë° ìë™ íƒìƒ‰ (ì—†ìœ¼ë©´ ì‹¤í–‰ ì°¨ë‹¨ìœ¼ë¡œ ì—ëŸ¬ ë°©ì§€)
+        if (!CheckAndFindFogTilemap()) return;
 
-        // ¿ùµå ÁÂÇ¥ÀÇ ÃÖ¼Ò/ÃÖ´ë ¿µ¿ªÀ» Å¸ÀÏ¸ÊÀÇ °İÀÚ ÁÂÇ¥(Vector3Int)·Î º¯È¯ÇÕ´Ï´Ù.
+        // ì›”ë“œ ì¢Œí‘œì˜ ìµœì†Œ/ìµœëŒ€ ì˜ì—­ì„ íƒ€ì¼ë§µì˜ ê²©ì ì¢Œí‘œ(Vector3Int)ë¡œ ë³€í™˜í•©ë‹ˆë‹¤.
         Vector3Int minCell = fogTilemap.layoutGrid.WorldToCell(minWorldPos);
         Vector3Int maxCell = fogTilemap.layoutGrid.WorldToCell(maxWorldPos);
 
-        // ¹æÀÇ ½ÃÀÛÁ¡(ÁÂÃø ÇÏ´Ü)ºÎÅÍ ³¡Á¡(¿ìÃø »ó´Ü)±îÁö ·çÇÁ¸¦ µ¹¸ç ¾È°³¸¦ Áö¿ó´Ï´Ù.
+        // ë°©ì˜ ì‹œì‘ì (ì¢Œì¸¡ í•˜ë‹¨)ë¶€í„° ëì (ìš°ì¸¡ ìƒë‹¨)ê¹Œì§€ ë£¨í”„ë¥¼ ëŒë©° ì•ˆê°œë¥¼ ì§€ì›ë‹ˆë‹¤.
         for (int x = minCell.x; x <= maxCell.x; x++)
         {
             for (int y = minCell.y; y <= maxCell.y; y++)
             {
                 Vector3Int targetCell = new Vector3Int(x, y, minCell.z);
-                fogTilemap.SetTile(targetCell, null);
+                fogTilemap.SetTile(targetCell, null); // â—€ 67ë²ˆ ì¤„ ì—ëŸ¬ ì›ì²œ ì°¨ë‹¨!
             }
         }
+    }
+
+    private bool CheckAndFindFogTilemap()
+    {
+        if (fogTilemap == null)
+        {
+            // í•˜ì´ì–´ë¼í‚¤ ì°½ì— ìˆëŠ” 'FogTilemap' ì´ë¦„ì˜ ì˜¤ë¸Œì íŠ¸ë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+            GameObject fogObj = GameObject.Find("FogTilemap");
+            if (fogObj != null)
+            {
+                fogTilemap = fogObj.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+            }
+        }
+        // ìµœì¢…ì ìœ¼ë¡œ ìˆìœ¼ë©´ true, ì—†ìœ¼ë©´ false ë°˜í™˜
+        return fogTilemap != null;
     }
 }

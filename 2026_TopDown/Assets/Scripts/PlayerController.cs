@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     [Header("Spawn Settings")]
-    public Vector3 spawnPosition = Vector3.zero; // 인스펙터에서 입력할 시작 좌표 (Z축은 보통 0)
+    public Vector3 spawnPosition = Vector3.zero; // 인스펙터에서 입력할 시작 좌표
     public float moveSpeed = 5f; // 한 칸 이동할 때의 속도
 
     [Header("Player Stats")]
@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
     public int playerAttack = 10;
 
     [Header("Tilemap Reference")]
-    public UnityEngine.Tilemaps.Tilemap wallTilemap; // 인스펙터에서 벽 타일맵을 지정하세요 (없으면 자동 수색)
+    public UnityEngine.Tilemaps.Tilemap wallTilemap; // 인스펙터 지정용 (없으면 자동 수색)
 
     [Header("Animations")]
     public Sprite[] spriteUp;
@@ -36,7 +36,6 @@ public class PlayerController : MonoBehaviour
         currentSprites = spriteDown;
         sr.sprite = currentSprites[0];
 
-        // 소수점 좌표(9.5, -16.5)가 그대로 유지되도록 합니다.
         targetPosition = new Vector3(spawnPosition.x, spawnPosition.y, spawnPosition.z);
         transform.position = targetPosition;
 
@@ -45,7 +44,7 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
-        // 1. [안전 장치] 데이터 매니저 조회 및 예외 처리 (에러 원천 차단)
+        // 1. 데이터 매니저 조회 및 능력치 세팅
         if (GameDataManager.Instance != null)
         {
             moveSpeed = GameDataManager.Instance.GetPlayerMoveSpeed();
@@ -57,10 +56,27 @@ public class PlayerController : MonoBehaviour
             Debug.LogWarning("GameDataManager.Instance를 찾을 수 없습니다. 기본값으로 진행합니다.");
         }
 
-        // 2. [자동 연동] 인스펙터에 벽 타일맵이 비어있다면 씬에서 자동으로 찾아 매핑합니다.
+        // 2. 벽 타일맵 실시간 연동 및 초기 안개 밝히기 통합 처리
+        RefreshSceneReferences();
+
+        // 0.05초 뒤에 현재 위치를 기준으로 맵을 다시 한번 강제 리프레시 (안전장치)
+        Invoke(nameof(InitialReveal), 0.05f);
+    }
+
+    // 💡 [추가] 씬 전환 등으로 인해 오브젝트가 활성화되거나 새 무대에 배치될 때 즉시 호출
+    private void OnEnable()
+    {
+        RefreshSceneReferences();
+    }
+
+    /// <summary>
+    /// 🚪 새 랜덤 맵으로 이동했을 때 씬 안에 물리 타일맵과 안개 시스템을 자동 재정렬합니다.
+    /// </summary>
+    private void RefreshSceneReferences()
+    {
+        // 새 씬의 벽 타일맵 탐색 및 자동 연동
         if (wallTilemap == null)
         {
-            // 하이어라키 창에 있는 'WallTilemap' 이름을 가진 오브젝트를 찾습니다.
             GameObject wallObj = GameObject.Find("WallTilemap");
             if (wallObj != null)
             {
@@ -68,14 +84,8 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 튜토리얼 코드 예외 처리
-        if (GameDataManager.Instance != null && GameDataManager.Instance.isTutorialFinished == 0)
-        {
-            // 튜토리얼 관련 처리...
-        }
-
-        // 0.05초 뒤에 현재 위치를 기준으로 맵을 강제 리프레시
-        Invoke(nameof(InitialReveal), 0.05f);
+        // 발밑 안개 즉시 오픈
+        InitialReveal();
     }
 
     private void InitialReveal()
@@ -83,11 +93,12 @@ public class PlayerController : MonoBehaviour
         FieldOfView fov = FindFirstObjectByType<FieldOfView>();
         if (fov != null)
         {
+            Debug.Log("📌 새 씬의 FieldOfView를 탐색하여 시작 위치 안개를 밝힙니다!");
             fov.RevealMap(transform.position);
         }
         else
         {
-            Debug.LogWarning("씬 안에서 FieldOfView 오브젝트를 찾을 수 없습니다.");
+            Debug.LogWarning("현재 씬 안에서 FieldOfView 오브젝트를 찾을 수 없습니다.");
         }
     }
 
@@ -122,7 +133,13 @@ public class PlayerController : MonoBehaviour
         if (sr == null || this == null) return;
         if (isMoving) return;
 
-        // [중요] 벽 타일맵이 없으면 충돌 연산 자체를 건너뛰어 터지는 것을 방지합니다.
+        // 벽 타일맵이 없다면 이동 직전 재탐색 시도
+        if (wallTilemap == null)
+        {
+            GameObject wallObj = GameObject.Find("WallTilemap");
+            if (wallObj != null) wallTilemap = wallObj.GetComponent<UnityEngine.Tilemaps.Tilemap>();
+        }
+
         if (wallTilemap == null)
         {
             Debug.LogError("WallTilemap이 할당되지 않아 충돌 검사를 할 수 없습니다!");
@@ -160,10 +177,9 @@ public class PlayerController : MonoBehaviour
             // 이동 처리
             targetPosition = prospectiveTarget;
             transform.position = targetPosition;
-
             isMoving = true;
 
-            // 이동 후 FOV 실시간 연동
+            // 이동 직후 실시간 안개 갱신
             FieldOfView fov = FindFirstObjectByType<FieldOfView>();
             if (fov != null)
             {

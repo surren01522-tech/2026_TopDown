@@ -337,7 +337,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1046905662}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
-        m_MethodName: StartGame
+        m_MethodName: LoadRandomMapScene
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1061,6 +1061,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   titleSceneName: TitleScene
   gameSceneName: GameScene
+  mapSceneNames:
+  - GameScene
+  - GameScene 1
+  - GameScene 2
+  - GameScene 3
+  - GameScene 4
+  - GameScene 5
+  - GameScene 6
+  - GameScene 7
+  - GameScene 8
+  - GameScene 9
 --- !u!4 &1046905663
 Transform:
   m_ObjectHideFlags: 0
