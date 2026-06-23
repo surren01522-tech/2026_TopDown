@@ -3,10 +3,8 @@ using UnityEngine;
 
 public class InventoryManager : MonoBehaviour
 {
-    // ✨ [이 부분이 누락되었거나 이름이 틀렸을 확률이 높습니다!] ✨
-    // 어디서나 InventoryManager.Instance로 접근할 수 있게 만드는 싱글톤 변수입니다.
+    // 어디서나 접근할 수 있게 만드는 싱글톤 변수
     public static InventoryManager Instance { get; private set; }
-
 
     // 🎒 플레이어의 가방
     public List<ItemData> items = new List<ItemData>();
@@ -15,8 +13,6 @@ public class InventoryManager : MonoBehaviour
 
     private void Awake()
     {
-        // ✨ [싱글톤 초기화 영역] ✨
-        // 문지기 역할: 이 세상에 인벤토리 매니저는 단 하나만 존재하도록 강제합니다.
         if (Instance == null)
         {
             Instance = this;
@@ -27,7 +23,7 @@ public class InventoryManager : MonoBehaviour
             return;
         }
 
-        // 기존 도감 데이터 세팅...
+        // 기본 도감 데이터 세팅
         potionDic.Add("potion_red", "치료 물약");
         potionDic.Add("potion_blue", "마나 물약");
         potionDic.Add("scroll_old", "시야 확장 주문서");
@@ -52,15 +48,18 @@ public class InventoryManager : MonoBehaviour
         }
         else if (nameKey.Contains("weapon") || nameKey.Contains("sword"))
         {
-            // 무기는 보통 처음부터 식별되어 있는 경우가 많으므로 true 세팅
             newItem = new ItemData("날카로운 검", "낡은 검", InventoryItemType.Weapon, 5, true);
         }
 
         if (newItem != null)
         {
             items.Add(newItem);
-            Debug.Log($"🎒 가방에 추가됨: {newItem.GetDisplayName()} (현재 가방 아이템 수: {items.Count}개)");
-            ShowInventoryLog();
+
+            // 🔥 [UI 연동] 노란색 글씨로 아이템 획득 메시지를 화면에 띄웁니다!
+            if (LogUIManager.Instance != null)
+            {
+                LogUIManager.Instance.AddLog($"🎒 가방에 추가됨: {newItem.GetDisplayName()}", Color.yellow);
+            }
         }
     }
 
@@ -70,14 +69,16 @@ public class InventoryManager : MonoBehaviour
         if (index < 0 || index >= items.Count) return;
 
         ItemData item = items[index];
-        Debug.Log($"🔮 {item.GetDisplayName()} 아이템 사용 시도!");
 
-        // 1. 아이템 종류별 효과 발동
+        // 1. 아이템 종류별 효과 발동 및 UI 메시지 출력
         switch (item.type)
         {
             case InventoryItemType.Potion:
                 player.playerHP += item.value;
-                Debug.Log($"❤️ [포션 복용] {item.GetDisplayName()}을(를) 마셨습니다! HP +{item.value} (현재 HP: {player.playerHP})");
+                if (LogUIManager.Instance != null)
+                {
+                    LogUIManager.Instance.AddLog($"❤️ {item.GetDisplayName()}을(를) 마셨습니다! HP +{item.value} (현재 HP: {player.playerHP})", Color.white);
+                }
                 break;
 
             case InventoryItemType.Scroll:
@@ -86,23 +87,34 @@ public class InventoryManager : MonoBehaviour
                 {
                     fov.viewRadius += item.value;
                     fov.RevealMap(player.transform.position);
-                    Debug.Log($"👁️ [주문서 낭독] 시야가 확장되었습니다! (현재 시야: {fov.viewRadius})");
+                    if (LogUIManager.Instance != null)
+                    {
+                        LogUIManager.Instance.AddLog($"👁️ {item.GetDisplayName()}을(를) 읽었습니다! 시야가 넓어집니다.", Color.white);
+                    }
                 }
                 break;
 
             case InventoryItemType.Weapon:
                 player.playerAttack += item.value;
-                Debug.Log($"⚔️ [무기 장착] 공격력이 영구히 상승했습니다! +{item.value} (현재 공격력: {player.playerAttack})");
+                if (LogUIManager.Instance != null)
+                {
+                    LogUIManager.Instance.AddLog($"⚔️ {item.GetDisplayName()}을(를) 장착했습니다! 공격력 +{item.value}", Color.white);
+                }
                 break;
         }
 
-        // 2. ⭐ [핵심 식별 메커니즘] 미식별 아이템이었다면, 사용한 순간 정체가 탄록납니다!
+        // 2. 미식별 아이템이었다면, 사용한 순간 정체가 탄록납니다!
         if (!item.isIdentified)
         {
             item.isIdentified = true;
-            Debug.Log($"💡 [식별 완료!] 이 아이템의 진짜 정체는 '{item.realName}' 이었습니다!");
 
-            // 💥 [정통 로그 시스템] 같은 판에서 획득한 동일한 종류의 물약들도 전부 자동으로 식별 처리합니다.
+            // 🔥 [UI 연동] 연두색 글씨로 식별 완료 메시지를 화면에 띄웁니다!
+            if (LogUIManager.Instance != null)
+            {
+                LogUIManager.Instance.AddLog($"💡 [식별 완료!] 진짜 정체는 '{item.realName}' 이었습니다!", Color.green);
+            }
+
+            // 같은 판에서 획득한 동일한 종류의 물약들도 전부 자동으로 식별 처리합니다.
             foreach (var inventoryItem in items)
             {
                 if (inventoryItem.realName == item.realName)
@@ -117,22 +129,8 @@ public class InventoryManager : MonoBehaviour
         {
             items.RemoveAt(index);
         }
-
-        ShowInventoryLog();
     }
 
-    // 콘솔창에 현재 인벤토리 목록을 보여주는 편리한 디버그용 함수
-    public void ShowInventoryLog()
-    {
-        string currentList = "--- 🎒 현재 가방 목록 --- \n";
-        for (int i = 0; i < items.Count; i++)
-        {
-            currentList += $"[{i + 1}번] {items[i].GetDisplayName()}\n";
-        }
-        Debug.Log(currentList);
-    }
-
-    // ⌨️ 테스트용 키보드 입력 체크 (1번, 2번 키를 누르면 아이템 소비)
     private void Update()
     {
         PlayerController player = FindFirstObjectByType<PlayerController>();

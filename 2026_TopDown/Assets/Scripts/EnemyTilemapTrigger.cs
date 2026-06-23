@@ -19,7 +19,6 @@ public class EnemyTilemapTrigger : MonoBehaviour
 
             Vector3 playerPos = collision.transform.position;
 
-            // 🎯 플레이어 중심점 기준 격자 계산
             Vector3Int playerCell = new Vector3Int(
                 Mathf.FloorToInt(playerPos.x),
                 Mathf.FloorToInt(playerPos.y),
@@ -28,7 +27,7 @@ public class EnemyTilemapTrigger : MonoBehaviour
 
             TileBase steppedTile = enemyTilemap.GetTile(playerCell);
 
-            // 💡 [오차 방어] 혹시 한 발짝 걸쳤다면 주변 9칸 스캔해서 적 타일 정밀 탐색
+            // 주변 9칸을 뒤져서 적 타일을 정밀 탐색
             if (steppedTile == null)
             {
                 for (int x = -1; x <= 1; x++)
@@ -52,52 +51,68 @@ public class EnemyTilemapTrigger : MonoBehaviour
             if (steppedTile != null)
             {
                 string enemyName = steppedTile.name;
-                Debug.Log($"⚔️ [전투 발생] {enemyName}와 부딪혔습니다! 격자 좌표: {playerCell}");
 
-                // 💥 전투 로직 실행 (예: 슬라임, 스켈레톤 등 이름에 따라 차등 대미지 가능)
+                // 전투 로직 실행
                 ExecuteBattle(enemyName, player);
 
-                // 💀 적 처치 처리: 해당 칸의 적 타일을 삭제합니다.
+                // 적 처치 처리: 해당 칸의 적 타일을 삭제합니다.
                 enemyTilemap.SetTile(playerCell, null);
             }
         }
     }
 
-    // 🔮 간단한 턴제 전투 계산기
+    // 🔮 턴제 전투 계산기 (UI 연동)
     private void ExecuteBattle(string enemyName, PlayerController player)
     {
-        // 예시: 적의 기본 체력을 30이라고 가정
         int enemyHP = 30;
         int enemyAttack = 15; // 적이 플레이어를 때리는 공격력
 
-        // 이름별로 스펙 조절 가능
         if (enemyName.ToLower().Contains("boss"))
         {
             enemyHP = 100;
             enemyAttack = 30;
-            Debug.Log("🚨 보스 몬스터와 조우했습니다!");
+            // 🔥 [UI 연동] 보스 조우 시 주황색 경고 메시지!
+            if (LogUIManager.Instance != null)
+            {
+                LogUIManager.Instance.AddLog("🚨 강력한 보스 몬스터와 마주쳤습니다!", new Color(1f, 0.5f, 0f));
+            }
         }
 
         // 1. 플레이어가 먼저 적을 공격합니다.
         enemyHP -= player.playerAttack;
-        Debug.Log($"⚔️ 플레이어가 {player.playerAttack}의 데미지로 공격! (적 잔여 HP: {Mathf.Max(0, enemyHP)})");
+        // 🔥 [UI 연동] 플레이어 공격 상황을 흰색 글로 출력!
+        if (LogUIManager.Instance != null)
+        {
+            LogUIManager.Instance.AddLog($"⚔️ 플레이어가 {enemyName}을(를) 공격하여 {player.playerAttack}의 피해를 줬습니다!", Color.white);
+        }
 
         // 2. 적이 살아남았다면 플레이어를 반격합니다.
         if (enemyHP > 0)
         {
             player.playerHP -= enemyAttack;
-            Debug.Log($"💥 적의 반격! 플레이어가 {enemyAttack}의 데미지를 입었습니다. (플레이어 현재 HP: {player.playerHP})");
+            // 🔥 [UI 연동] 적의 반격 및 피해 상황을 빨간색 글로 출력!
+            if (LogUIManager.Instance != null)
+            {
+                LogUIManager.Instance.AddLog($"💥 {enemyName}의 반격! {enemyAttack}의 대미지를 입었습니다. (현재 HP: {player.playerHP})", Color.red);
+            }
 
-            // 플레이어 사망 체크 (기존 PlayerController에 있던 GameOver 연동)
+            // 플레이어 사망 체크
             if (player.playerHP <= 0)
             {
-                Debug.LogError("💀 플레이어의 체력이 0이 되었습니다.");
+                if (LogUIManager.Instance != null)
+                {
+                    LogUIManager.Instance.AddLog("💀 플레이어가 쓰러졌습니다...", Color.red);
+                }
                 if (GameManager.Instance != null) GameManager.Instance.GameOver();
             }
         }
         else
         {
-            Debug.Log($"✨ {enemyName}를 무찌르고 승리했습니다!");
+            // 🔥 [UI 연동] 적 처치 성공 시 하늘색 글로 출력!
+            if (LogUIManager.Instance != null)
+            {
+                LogUIManager.Instance.AddLog($"✨ {enemyName}을(를) 처치하고 승리했습니다!", Color.cyan);
+            }
         }
     }
 }
