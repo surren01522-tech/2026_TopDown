@@ -14,15 +14,11 @@ public class FieldOfView : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+
+        // 기존 코드가 싱글톤을 덮어쓰지 않도록 확실하게 현재 오브젝트로 고정합니다.
+        Instance = this;
     }
 
     /// <summary>
