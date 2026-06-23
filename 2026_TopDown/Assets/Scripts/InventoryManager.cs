@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class InventoryManager : MonoBehaviour
 {
-    // 어디서나 접근할 수 있게 만드는 싱글톤 변수
     public static InventoryManager Instance { get; private set; }
 
     // 🎒 플레이어의 가방
@@ -35,7 +34,6 @@ public class InventoryManager : MonoBehaviour
         string nameKey = tileName.ToLower();
         ItemData newItem = null;
 
-        // 타일 이름 분석해서 알맞은 데이터 매칭
         if (nameKey.Contains("potion"))
         {
             string real = potionDic.ContainsKey(nameKey) ? potionDic[nameKey] : "미지의 물약";
@@ -55,10 +53,10 @@ public class InventoryManager : MonoBehaviour
         {
             items.Add(newItem);
 
-            // 🔥 [UI 연동] 노란색 글씨로 아이템 획득 메시지를 화면에 띄웁니다!
+            // 💡 [해결책 1 적용] 이모지 대신 [획득] 기호 사용
             if (LogUIManager.Instance != null)
             {
-                LogUIManager.Instance.AddLog($"🎒 가방에 추가됨: {newItem.GetDisplayName()}", Color.yellow);
+                LogUIManager.Instance.AddLog($"[획득] 가방에 추가됨: {newItem.GetDisplayName()}", Color.yellow);
             }
         }
     }
@@ -70,14 +68,14 @@ public class InventoryManager : MonoBehaviour
 
         ItemData item = items[index];
 
-        // 1. 아이템 종류별 효과 발동 및 UI 메시지 출력
         switch (item.type)
         {
             case InventoryItemType.Potion:
                 player.playerHP += item.value;
+                // 💡 [해결책 1 적용] 이모지 대신 [회복] 기호 사용
                 if (LogUIManager.Instance != null)
                 {
-                    LogUIManager.Instance.AddLog($"❤️ {item.GetDisplayName()}을(를) 마셨습니다! HP +{item.value} (현재 HP: {player.playerHP})", Color.white);
+                    LogUIManager.Instance.AddLog($"[회복] {item.GetDisplayName()}을(를) 마셨습니다! HP +{item.value} (현재 HP: {player.playerHP})", Color.white);
                 }
                 break;
 
@@ -87,34 +85,34 @@ public class InventoryManager : MonoBehaviour
                 {
                     fov.viewRadius += item.value;
                     fov.RevealMap(player.transform.position);
+                    // 💡 [해결책 1 적용] 이모지 대신 [효과] 기호 사용
                     if (LogUIManager.Instance != null)
                     {
-                        LogUIManager.Instance.AddLog($"👁️ {item.GetDisplayName()}을(를) 읽었습니다! 시야가 넓어집니다.", Color.white);
+                        LogUIManager.Instance.AddLog($"[효과] {item.GetDisplayName()}을(를) 읽었습니다! 시야가 넓어집니다.", Color.white);
                     }
                 }
                 break;
 
             case InventoryItemType.Weapon:
                 player.playerAttack += item.value;
+                // 💡 [해결책 1 적용] 이모지 대신 [장착] 기호 사용
                 if (LogUIManager.Instance != null)
                 {
-                    LogUIManager.Instance.AddLog($"⚔️ {item.GetDisplayName()}을(를) 장착했습니다! 공격력 +{item.value}", Color.white);
+                    LogUIManager.Instance.AddLog($"[장착] {item.GetDisplayName()}을(를) 장착했습니다! 공격력 +{item.value}", Color.white);
                 }
                 break;
         }
 
-        // 2. 미식별 아이템이었다면, 사용한 순간 정체가 탄록납니다!
         if (!item.isIdentified)
         {
             item.isIdentified = true;
 
-            // 🔥 [UI 연동] 연두색 글씨로 식별 완료 메시지를 화면에 띄웁니다!
+            // 💡 [해결책 1 적용] 이모지 대신 [식별] 기호 사용
             if (LogUIManager.Instance != null)
             {
-                LogUIManager.Instance.AddLog($"💡 [식별 완료!] 진짜 정체는 '{item.realName}' 이었습니다!", Color.green);
+                LogUIManager.Instance.AddLog($"[식별] 진짜 정체는 '{item.realName}' 이었습니다!", Color.green);
             }
 
-            // 같은 판에서 획득한 동일한 종류의 물약들도 전부 자동으로 식별 처리합니다.
             foreach (var inventoryItem in items)
             {
                 if (inventoryItem.realName == item.realName)
@@ -124,7 +122,6 @@ public class InventoryManager : MonoBehaviour
             }
         }
 
-        // 3. 소모품(물약, 주문서)이라면 가방에서 제거
         if (item.type != InventoryItemType.Weapon)
         {
             items.RemoveAt(index);
@@ -136,7 +133,7 @@ public class InventoryManager : MonoBehaviour
         PlayerController player = FindFirstObjectByType<PlayerController>();
         if (player == null) return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1)) UseItem(0, player); // 숫자 1키로 1번째 아이템 사용
-        if (Input.GetKeyDown(KeyCode.Alpha2)) UseItem(1, player); // 숫자 2키로 2번째 아이템 사용
+        if (Input.GetKeyDown(KeyCode.Alpha1)) UseItem(0, player);
+        if (Input.GetKeyDown(KeyCode.Alpha2)) UseItem(1, player);
     }
 }
