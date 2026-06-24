@@ -1,60 +1,122 @@
 ﻿using UnityEngine;
-using TMPro; // TextMeshPro 기능을 사용하기 위해 필수 추가
+using TMPro;
 
 public class TitleUIController : MonoBehaviour
 {
-    [Header("UI Text References")]
-    public TextMeshProUGUI colorButtonText; // Color On/Off 텍스트 컴포넌트
-    public TextMeshProUGUI soundButtonText; // Sound On/Off 텍스트 컴포넌트
+    [Header("연동할 게임 세팅 데이터")]
+    public GameSettingData gameSetting; 
+
+    [Header("조작할 패널 오브젝트 (Esc용)")]
+    public GameObject settingPanel; // 하이어라키의 'Panel' 오브젝트를 꼭 연결해 주세요!
+
+    [Header("입력 필드 UI")]
+    public TMP_InputField hpInputField;    
+    public TMP_InputField atkInputField;   
+    public TMP_InputField speedInputField; 
 
     private void Start()
     {
-        // 게임 시작 시 GameDataManager에 기록된 기존 세팅값에 맞춰 UI 텍스트 초기화
-        UpdateColorUI();
-        UpdateSoundUI();
+        RefreshInputFieldValues();
     }
 
-    // [Color] 버튼을 눌렀을 때 실행될 함수
-    public void ToggleColorMode()
+    private void Update()
     {
-        if (GameDataManager.Instance == null) return;
-
-        // true ↔ false 토글(반전)
-        GameDataManager.Instance.isColorMode = !GameDataManager.Instance.isColorMode;
-
-        // 텍스트 UI 업데이트
-        UpdateColorUI();
-
-        // 💡 (선택 사항) 여기에 카메라 흑백 전환 프리셋이나 포스트 프로세싱 연동 코드를 넣을 수 있습니다.
-        Debug.Log($"컬러 모드 변경됨: {GameDataManager.Instance.isColorMode}");
+        // 키보드 Esc 키 입력을 감지
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            HandleEscapeKey();
+        }
     }
 
-    // [Sound] 버튼을 눌렀을 때 실행될 함수
-    public void ToggleSound()
+    // 🚪 Esc 키 처리 로직 (오직 패널만 종료)
+    private void HandleEscapeKey()
     {
-        if (GameDataManager.Instance == null) return;
+        if (settingPanel == null) return;
 
-        // true ↔ false 토글(반전)
-        GameDataManager.Instance.isSoundOn = !GameDataManager.Instance.isSoundOn;
+        // [안전장치 1] 만약 인풋필드 타이핑 중에 Esc를 누른 거라면, 입력창 포커스부터 먼저 풀어줍니다.
+        if (hpInputField != null && hpInputField.isFocused) { hpInputField.DeactivateInputField(); return; }
+        if (atkInputField != null && atkInputField.isFocused) { atkInputField.DeactivateInputField(); return; }
+        if (speedInputField != null && speedInputField.isFocused) { speedInputField.DeactivateInputField(); return; }
 
-        // 텍스트 UI 업데이트
-        UpdateSoundUI();
-
-        // 유니티 마스터 볼륨을 켜고(1) 끄기(0)
-        AudioListener.volume = GameDataManager.Instance.isSoundOn ? 1f : 0f;
-
-        Debug.Log($"사운드 상태 변경됨: {GameDataManager.Instance.isSoundOn}");
+        // 패널이 활성화되어(켜져) 있다면 패널을 비활성화(종료)합니다.
+        if (settingPanel.activeSelf == true)
+        {
+            settingPanel.SetActive(false);
+            Debug.Log("Esc 입력: 세팅 패널을 성공적으로 닫았습니다.");
+        }
     }
 
-    private void UpdateColorUI()
+    // 🔓 [새로 추가] 메인 화면의 'Player setting' 버튼을 누르면 패널을 열어주는 함수
+    public void OpenSettingPanel()
     {
-        if (GameDataManager.Instance == null || colorButtonText == null) return;
-        colorButtonText.text = GameDataManager.Instance.isColorMode ? "Color On" : "Color Off";
+        if (settingPanel != null)
+        {
+            // 1. 숨겨져 있던 패널을 화면에 보이게 켭니다.
+            settingPanel.SetActive(true);
+            
+            // 2. 패널이 열릴 때 ScriptableObject의 최신 수치를 인풋필드에 한 번 더 새로고침해 줍니다.
+            RefreshInputFieldValues(); 
+            Debug.Log("버튼 클릭: 세팅 패널을 열었습니다.");
+        }
     }
 
-    private void UpdateSoundUI()
+    // 🔒 패널 내부의 'esc' 버튼을 누르면 패널을 닫아주는 함수
+    public void CloseSettingPanel()
     {
-        if (GameDataManager.Instance == null || soundButtonText == null) return;
-        soundButtonText.text = GameDataManager.Instance.isSoundOn ? "Sound On" : "Sound Off";
+        if (settingPanel != null)
+        {
+            settingPanel.SetActive(false);
+            Debug.Log("버튼 클릭: 세팅 패널을 닫았습니다.");
+        }
+    }
+
+    // 🔄 데이터 동기화
+    public void RefreshInputFieldValues()
+    {
+        if (gameSetting == null) return;
+
+        if (hpInputField != null) hpInputField.text = gameSetting.StartHP.ToString();
+        if (atkInputField != null) atkInputField.text = gameSetting.StartAttack.ToString();
+        if (speedInputField != null) speedInputField.text = gameSetting.PlayerMoveSpeed.ToString("F1"); 
+    }
+
+    public void OnHPInputEnd(string rawText)
+    {
+        if (gameSetting == null) return;
+        if (int.TryParse(rawText, out int parsedValue))
+        {
+            gameSetting.StartHP = Mathf.Max(10, parsedValue);
+        }
+        RefreshInputFieldValues();
+        SaveSetting();
+    }
+
+    public void OnAtkInputEnd(string rawText)
+    {
+        if (gameSetting == null) return;
+        if (int.TryParse(rawText, out int parsedValue))
+        {
+            gameSetting.StartAttack = Mathf.Max(1, parsedValue);
+        }
+        RefreshInputFieldValues();
+        SaveSetting();
+    }
+
+    public void OnSpeedInputEnd(string rawText)
+    {
+        if (gameSetting == null) return;
+        if (float.TryParse(rawText, out float parsedValue))
+        {
+            gameSetting.PlayerMoveSpeed = Mathf.Max(1f, parsedValue);
+        }
+        RefreshInputFieldValues();
+        SaveSetting();
+    }
+
+    private void SaveSetting()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorUtility.SetDirty(gameSetting);
+#endif
     }
 }

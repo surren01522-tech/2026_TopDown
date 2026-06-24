@@ -42,8 +42,8 @@ public class GameDataManager : MonoBehaviour
     {
         if (gameSettingData == null || saveData == null) return 100; // 방어 코드
 
-        int baseHP = gameSettingData.startHP;
-        int bonusHP = gameSettingData.hpBounsPerDeath;
+        int baseHP = gameSettingData.StartHP;
+        int bonusHP = gameSettingData.HpBounsPerDeath;
 
         return baseHP + bonusHP * saveData.deathCount;
     }
@@ -52,8 +52,8 @@ public class GameDataManager : MonoBehaviour
     {
         if (gameSettingData == null || saveData == null) return 10; // 방어 코드
 
-        int baseAttack = gameSettingData.startAttack;
-        int bonusAttack = gameSettingData.atkBonusPerDeath;
+        int baseAttack = gameSettingData.StartAttack;
+        int bonusAttack = gameSettingData.AtkBonusPerDeath;
         return baseAttack + bonusAttack * saveData.deathCount;
     }
 
@@ -61,7 +61,7 @@ public class GameDataManager : MonoBehaviour
     {
         if (gameSettingData == null) return 5f; // 방어 코드
 
-        return gameSettingData.playerMoveSpeed;
+        return gameSettingData.PlayerMoveSpeed;
     }
 
     // --- Json 저장 파트 ---

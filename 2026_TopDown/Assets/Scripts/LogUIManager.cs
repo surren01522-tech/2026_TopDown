@@ -11,6 +11,7 @@ public class LogUIManager : MonoBehaviour
     [Header("UI 요소 연결 (인스펙터에서 드래그)")]
     public GameObject logCanvasWindow;    // 껐다 켰다 할 Scroll View 오브젝트
     public TextMeshProUGUI logTextPrefab; // 우리가 둥근모꼴 폰트를 설정한 프리팹
+    public TextMeshProUGUI NotificationText;
     public Transform logContent;          // UI 내의 Content 오브젝트
     public ScrollRect scrollRect;         // UI 내의 Scroll View 오브젝트 자체
 
@@ -83,6 +84,7 @@ public class LogUIManager : MonoBehaviour
         // ✨ [수정] 생성할 때 부모(logContent)를 넣어주는 것 하나만으로 충분합니다!
         // 중복으로 들어가 있던 SetParent 라인을 지웠습니다.
         TextMeshProUGUI newLog = Instantiate(logTextPrefab, logContent);
+        NotificationText.text = message; 
 
         newLog.text = message;
         newLog.color = textColor;

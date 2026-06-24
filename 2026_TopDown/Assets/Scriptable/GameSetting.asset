@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60611899b5f75154b86c615413ec98c7, type: 3}
   m_Name: GameSetting
   m_EditorClassIdentifier: Assembly-CSharp::GameSettingData
-  startHP: 100
-  startAttack: 10
-  playerMoveSpeed: 5
-  hpBounsPerDeath: 5
-  atkBonusPerDeath: 1
+  StartHP: 100
+  StartAttack: 10
+  PlayerMoveSpeed: 5
+  HpBounsPerDeath: 5
+  AtkBonusPerDeath: 1
