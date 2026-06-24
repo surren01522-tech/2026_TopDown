@@ -13564,7 +13564,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   titleSceneName: TitleScene
   gameSceneName: GameScene
-  mapSceneNames: []
+  mapSceneNames:
+  - GameScene
+  - GameScene 1
+  - GameScene 2
+  - GameScene 3
+  - GameScene 4
 --- !u!114 &1909374498
 MonoBehaviour:
   m_ObjectHideFlags: 0
